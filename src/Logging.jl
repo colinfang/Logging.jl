@@ -44,28 +44,6 @@ for (fn,lvl,clr) in ((:debug,    DEBUG,    :cyan),
     end
 end
 
-macro loglevel(level)
-    args = Any[]
-    push!(args, :(Logging._root.level = $(esc(level))))
-    for (fn,lvl,clr) in ((:debug,    Logging.DEBUG,    :cyan),
-                         (:info,     Logging.INFO,     :blue),
-                         (:warn,     Logging.WARNING,  :magenta),
-                         (:err,      Logging.ERROR,    :red),
-                         (:critical, Logging.CRITICAL, :red))
-        push!(args, 
-            :(if $lvl >= $(esc(level))
-                global macro $fn(msg::String)
-                    Base.print_with_color($(Expr(:quote, clr)), Logging._root.output, string($lvl), ":", Logging._root.name, ":", msg, "\n")
-                end
-              else
-                global macro $fn(msg::String) end
-              end))
-    end
-    Expr(:block, args...)
-end
-
-@loglevel(WARNING)
-
 function configure(logger=_root; args...)
     for (tag, val) in args
         if tag == :parent
@@ -79,7 +57,7 @@ function configure(logger=_root; args...)
         @match tag begin
             :io       => logger.output = val::IO
             :filename => logger.output = open(val, "w")
-            :level    => if logger == _root;  @loglevel(val::LogLevel) else logger.level  = val::LogLevel end
+            :level    => logger.level  = val::LogLevel  #if logger == _root;  @loglevel(val::LogLevel) else logger.level  = val::LogLevel end
             :parent   => logger.parent = val::Logger
             unk       => Base.error("Logging: unknown configure argument \"$unk\"")
         end
@@ -87,5 +65,14 @@ function configure(logger=_root; args...)
 
     logger
 end
+
+macro loglevel(level)
+    quote
+        configure(level=$(esc(level)))
+        evalfile("LoggingMacro.jl")
+    end
+end
+
+@loglevel(WARNING)
 
 end # module
