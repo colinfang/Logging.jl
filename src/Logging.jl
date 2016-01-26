@@ -102,7 +102,8 @@ function log(syslog::SysLog, level::LogLevel, color::Symbol, logger_name::Abstra
 end
 
 function log{T<:IO}(output::T, level::LogLevel, color::Symbol, logger_name::AbstractString, msg...)
-    logstring = string(strftime("%d-%b %H:%M:%S",time()),":",level, ":",logger_name,":", msg...,"\n")
+    t = time()
+    logstring = string(strftime("%Y-%m-%dT%H:%M:%S",t),":",level, ":",logger_name,":", msg...,"\n")
     write_log(output, color, logstring)
 end
 
